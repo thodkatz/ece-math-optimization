@@ -63,7 +63,7 @@ for idFunc=1:numel(funcs)
 end
 
 %% GOLDEN SECTOR METHOD
-intervalAccuracy = [0.0001 0.0025 0.004 0.006 0.008 0.01 0.012 0.014 0.016 0.018 0.02 0.025];
+intervalAccuracy = [0.0025 0.004 0.006 0.008 0.01 0.012 0.014 0.016 0.018 0.02 0.025];
 ends = cell(numFuncs,numel(intervalAccuracy));
 countFunctionCalls = cell(numFuncs,numel(intervalAccuracy));
 
@@ -79,7 +79,7 @@ end
 
 %% FIBONACCI METHOD
 intervalStep = 0.001;
-intervalAccuracy = [0.0001 0.0025 0.004 0.006 0.008 0.01 0.012 0.014 0.016 0.018 0.02 0.025];
+intervalAccuracy = [0.0025 0.004 0.006 0.008 0.01 0.012 0.014 0.016 0.018 0.02 0.025];
 ends = cell(numFuncs,numel(intervalAccuracy));
 countFunctionCalls = cell(3,numel(intervalAccuracy));
 
@@ -87,14 +87,14 @@ funcs=cell(numFuncs,1);
 funcs{1} = f1; funcs{2} = f2; funcs{3} = f3;
 for idFunc=1:numel(funcs)
     for i=1:numel(intervalAccuracy)
-        [endPoints,count] = fibonacci(intervalStart,intervalStep,intervalAccuracy(i),funcs{idFunc});
+        [endPoints,count] = fib(intervalStart,intervalStep,intervalAccuracy(i),funcs{idFunc});
         ends(idFunc,i) = {endPoints};
         countFunctionCalls(idFunc,i) = {count};
     end
 end
 
 %% BISECTION DERIVATIVE METHOD
-intervalAccuracy = [0.0001 0.0025 0.004 0.006 0.008 0.01 0.012 0.014 0.016 0.018 0.02 0.025];
+intervalAccuracy = [0.0025 0.004 0.006 0.008 0.01 0.012 0.014 0.016 0.018 0.02 0.025];
 ends = cell(numFuncs,numel(intervalAccuracy));
 countFunctionCalls = cell(numFuncs,numel(intervalAccuracy));
 
@@ -107,6 +107,7 @@ for idFunc=1:numel(funcs)
         countFunctionCalls(idFunc,i) = {count};
     end
 end
+
 %% PLOTS
 % varying epsilon (used for bisection method)
 figure
@@ -118,7 +119,7 @@ xlabel('$\epsilon$','fontsize',14,'interpreter','latex')
 ylabel('Function calls $f_i(x)$','fontsize',14,'interpreter','latex')
 
 legend('$f_1(x)$','$f_2(x)$','$f_3(x)$','Interpreter','latex');
-exportgraphics(gcf,'bisection_epsilon.pdf','ContentType','vector')
+%exportgraphics(gcf,'bisection_epsilon.pdf','ContentType','vector')
 
 %% varying end points with stable lambda
 figure
@@ -143,25 +144,42 @@ xlabel('$\lambda$','fontsize',14,'interpreter','latex')
 ylabel('Function calls $f_i(x)$','fontsize',14,'interpreter','latex')
 
 legend('$f_1(x)$','$f_2(x)$','$f_3(x)$','Interpreter','latex');
-exportgraphics(gcf,'bisection_lambda.pdf','ContentType','vector')
+exportgraphics(gcf,'bisection_deriv_lambda.pdf','ContentType','vector')
 
-%% varying end points with stable epsilon
+%% varying end points with stable epsilon with respect to iterations k
 figure
 hold on
 for i=[1 5 10]
-pairs = cell2mat(ends(3,i));
-[k,] = size(pairs);
-plot(1:k,pairs(:,1),'--o')
-plot(1:k,pairs(:,2),'--o')
-xlabel('$k$','fontsize',14,'interpreter','latex')
-ylabel('$x$','fontsize',14,'interpreter','latex')
+    pairs = cell2mat(ends(3,i));
+    [k,] = size(pairs);
+    plot(0:k-1,pairs(:,1),'--o')
+    plot(0:k-1,pairs(:,2),'--o')
+    xlabel('$k$','fontsize',14,'interpreter','latex')
+    ylabel('$x$','fontsize',14,'interpreter','latex')
 end
-xlim([8 12])
+%xlim([8 12])
 legend('$\alpha (\epsilon=0.0025)$','$\beta (\epsilon=0.0025)$',...
     '$\alpha (\epsilon=0.01)$','$\beta (\epsilon=0.01)$','$\alpha (\epsilon=0.02)$','$\beta (\epsilon=0.02)$',...
-    'Interpreter','latex','location','southeast');
-%exportgraphics(gcf,'bisection_endpoints_f1.pdf','ContentType','vector')
-exportgraphics(gcf,'bisection_endpoints_f3_zoom.pdf','ContentType','vector')
+    'Interpreter','latex');
+exportgraphics(gcf,'bisection_deriv_endpoints_f3.pdf','ContentType','vector')
+%exportgraphics(gcf,'bisection_deriv_endpoints_f3_zoom.pdf','ContentType','vector')
+
+%% varying end points with stable epsilon with respect to lambda
+figure
+count = 1;
+for i=1:numel(intervalAccuracy)
+    pairs = cell2mat(ends(3,i));
+    finalA(count) = pairs(end,1);
+    finalB(count) = pairs(end,2);
+    count = count+1;
+end
+hold on
+plot(intervalAccuracy,finalA,'--o')
+plot(intervalAccuracy,finalB,'--o')
+xlabel('$l$','fontsize',14,'interpreter','latex')
+ylabel('$x$','fontsize',14,'interpreter','latex')
+legend('$\alpha_k$','$\beta_k$','interpreter','latex')
+%exportgraphics(gcf,'bisection_deriv_endpoints_f3_lambda.pdf','ContentType','vector')
 
 function [ends,countFunctionCalls] = bisection(intervalStart,intervalStep,intervalAccuracy,f)
     a(1) = intervalStart(1);
@@ -183,8 +201,8 @@ function [ends,countFunctionCalls] = bisection(intervalStart,intervalStep,interv
         i = i+1;
     end
     
-    ends(:,1) = a(1:end-1);
-    ends(:,2) = b(1:end-1);
+    ends(:,1) = a;
+    ends(:,2) = b;
 end
 
 function [ends,countFunctionCalls] = goldenSector(intervalStart,intervalAccuracy,f)
@@ -220,28 +238,30 @@ function [ends,countFunctionCalls] = goldenSector(intervalStart,intervalAccuracy
         countFunctionCalls = countFunctionCalls+1;
         i = i+1;
     end
+    % remove last redundant call
+    countFunctionCalls = countFunctionCalls-1;
     
-    ends(:,1) = a(1:end-1);
-    ends(:,2) = b(1:end-1);
+    ends(:,1) = a;
+    ends(:,2) = b;
 end
 
-function [ends,countFunctionCalls] = fibonacci(intervalStart,intervalStep,intervalAccuracy,f)
+function [ends,countFunctionCalls] = fib(intervalStart,intervalStep,intervalAccuracy,f)
     % init
     a(1) = intervalStart(1);
     b(1) = intervalStart(2);
     
     % find number of iterations
-    fib(1) = 0; fib(2) = 1;
-    n = 2;
-    while((fib(n)+fib(n-1)) <= (b(1)-a(1))/intervalAccuracy)
+    %fib(1) = 1; fib(2) = 1;
+    n = 1;
+    while fibonacci(n) <= (b(1)-a(1))/intervalAccuracy
        n = n + 1;
-       fib(n) = fib(n-2) + fib(n-1);
     end
-    %fprintf("num iterations: %d, %0.2f\n",n,(b(1)-a(1))/intervalAccuracy)
+    n = n+1;
+    %fprintf("num iterations: %d, ,%f,%0.2f\n",n,intervalAccuracy,(b(1)-a(1))/intervalAccuracy)
     
     nextX = @(a,b,ratio) a + ratio*(b-a);
-    x1 = nextX(a(1),b(1),fib(n-2)/fib(n));
-    x2 = nextX(a(1),b(1),fib(n-1)/fib(n));
+    x1 = nextX(a(1),b(1),fibonacci(n-2)/fibonacci(n));
+    x2 = nextX(a(1),b(1),fibonacci(n-1)/fibonacci(n));
     y1 = f(x1);
     y2 = f(x2);
     
@@ -256,7 +276,7 @@ function [ends,countFunctionCalls] = fibonacci(intervalStart,intervalStep,interv
                 a(i+1) = a(i);
                 b(i+1) = x2;
                 x2 = x1;
-                x1 = nextX(a(i+1),b(i+1),fib(n-2-i)/fib(n-i));
+                x1 = nextX(a(i+1),b(i+1),fibonacci(n-2-i)/fibonacci(n-i));
                 y2 = y1;
                 y1 = f(x1);
             end
@@ -268,7 +288,7 @@ function [ends,countFunctionCalls] = fibonacci(intervalStart,intervalStep,interv
                 a(i+1) = x1;
                 b(i+1) = b(i);
                 x1 = x2;
-                x2 = nextX(a(i+1),b(i+1),fib(n-1-i)/fib(n-i));
+                x2 = nextX(a(i+1),b(i+1),fibonacci(n-1-i)/fibonacci(n-i));
                 y1 = y2;
                 y2 = f(x2);
             end
@@ -294,14 +314,14 @@ function [ends,countFunctionCalls] = bisectionDerivative(intervalStart,intervalA
 
     % find number of iterations
     n = 1;
-    while((0.5)^(n+1) > intervalAccuracy/(b(1)-a(1)))
+    while((0.5)^(n) > intervalAccuracy/(b(1)-a(1)))
          n = n+1;
     end
     %fprintf("%0.2f,%d\n",intervalAccuracy/(b(1)-a(1)),n)
     
     countFunctionCalls = 0;
     i = 1;
-    while i <= n-1 
+    while i <= n
         x = (a(i)+b(i))/2;
         dx = df(x);
         countFunctionCalls = countFunctionCalls+1;
